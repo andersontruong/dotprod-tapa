@@ -14,7 +14,10 @@ using std::endl;
 using std::vector;
 using std::array;
 
-void DotProd_CPU(vector<float> v1, vector<float> v2, float& output, uint64_t n) {
+template <typename T>
+using aligned_vector = std::vector<T, tapa::aligned_allocator<T>>;
+
+void DotProd_CPU(aligned_vector<float> v1, aligned_vector<float> v2, float& output, uint64_t n) {
     float sum = 0;
     for (uint64_t i = 0; i < n; ++i) {
         sum += v1[i] * v2[i];
@@ -23,7 +26,7 @@ void DotProd_CPU(vector<float> v1, vector<float> v2, float& output, uint64_t n) 
 }
 
 void DotProd(tapa::mmap<const float> v1, tapa::mmap<const float> v2,
-             tapa::mmap<float> output, uint64_t n);
+             tapa::mmap<float> output, uint64_t n, tapa::mmap<uint64_t> total);
 
 DEFINE_string(bitstream, "", "path to bitstream file, run csim if empty");
 
@@ -31,10 +34,12 @@ int main(int argc, char* argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
 
     const uint64_t n = argc > 1 ? atoll(argv[1]) : 1024 * 1024;
-    vector<float> v1(n);
-    vector<float> v2(n);
-    array<float, 1> output = { 0 };
+    aligned_vector<float> v1(n);
+    aligned_vector<float> v2(n);
+    aligned_vector<float> output = { 0 };
     float& output_tapa = output[0];
+    aligned_vector<uint64_t> total = { 0 };
+    uint64_t& cycles = total[0];
 
     for (uint64_t i = 0; i < n; ++i) {
         v1[i] = static_cast<float>(i);
@@ -46,7 +51,8 @@ int main(int argc, char* argv[]) {
         tapa::read_only_mmap<const float>(v1),
         tapa::read_only_mmap<const float>(v2),
         tapa::write_only_mmap<float>(output),
-        n
+        n,
+        tapa::write_only_mmap<uint64_t>(total)
     );
 
     clog << "kernel time: " << kernel_time_ns * 1e-9 << " s" << endl;
@@ -55,6 +61,8 @@ int main(int argc, char* argv[]) {
     float output_cpu = 0;
     DotProd_CPU(v1, v2, output_cpu, n);
     clog << "CPU Output: " << output_cpu << endl;
+
+    clog << "Total Cycles: " << cycles << endl;
 
     if (output_tapa != output_cpu) {
         clog << "FAIL!" << endl;
