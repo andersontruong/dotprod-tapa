@@ -1,6 +1,8 @@
 #include <cstdint>
 #include <tapa.h>
 
+#define ACC_LATENCY 7
+
 void Multiply(tapa::istream<float>& v1_q, tapa::istream<float>& v2_q,
          tapa::ostream<float>& prod_q, uint64_t n) {
 Loop_Multiply: for (uint64_t i = 0; i < n; ++i) {
@@ -10,10 +12,17 @@ Loop_Multiply: for (uint64_t i = 0; i < n; ++i) {
 
 void Accumulate(tapa::istream<float>& prod_q,
          tapa::mmap<float> prod_out, uint64_t n, tapa::ostream<bool>& stop_flag) {
+    float bins[ACC_LATENCY];
     float sum = 0;
-Loop_Accumulate: for (uint64_t i = 0; i < n; ++i) {
-        sum += prod_q.read();
+
+Loop_Accumulate_Binning: for (uint64_t i = 0; i < n; ++i) {
+        bins[i % ACC_LATENCY] += prod_q.read();
     }
+
+Loop_Accumulate_Join: for (int i = 0; i < ACC_LATENCY; ++i) {
+        sum += bins[i];
+    }
+
     prod_out[0] = sum;
     stop_flag << true;
 }

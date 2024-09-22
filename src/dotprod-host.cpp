@@ -62,7 +62,10 @@ int main(int argc, char* argv[]) {
     DotProd_CPU(v1, v2, output_cpu, n);
     clog << "CPU Output: " << output_cpu << endl;
 
+    clog << "Vector size N=" << n << endl;
     clog << "Total Cycles: " << cycles << endl;
+
+    clog << "\nCycles/elem = " << (float)cycles / n << endl;
 
     if (output_tapa != output_cpu) {
         clog << "FAIL!" << endl;
