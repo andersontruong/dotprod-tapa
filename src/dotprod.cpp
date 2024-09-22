@@ -20,6 +20,7 @@ Loop_Accumulate_Binning: for (uint64_t i = 0; i < n; ++i) {
     }
 
 Loop_Accumulate_Join: for (int i = 0; i < ACC_LATENCY; ++i) {
+    #pragma HLS unroll
         sum += bins[i];
     }
 
