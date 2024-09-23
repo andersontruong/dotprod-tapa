@@ -2,7 +2,7 @@
 #include <tapa.h>
 #include <ap_utils.h>
 
-#define ACC_LATENCY 8
+#define ACC_LATENCY 4
 
 void Multiply(tapa::istream<float>& v1_q, tapa::istream<float>& v2_q,
          tapa::ostream<float>& prod_q, uint64_t n) {
@@ -18,8 +18,8 @@ void Accumulate(tapa::istream<float>& prod_q,
     float sum = 0;
 
 Loop_Accumulate_Binning: for (uint64_t i = 0; i < n; ++i) {
-#pragma HLS pipeline II=8
-#pragma HLS unroll factor=8
+#pragma HLS pipeline II=4
+#pragma HLS unroll factor=4
         bins[i % ACC_LATENCY] += prod_q.read();
     }
 
