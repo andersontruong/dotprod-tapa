@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <array>
+#include <ap_int.h>
 
 #include <gflags/gflags.h>
 #include <tapa.h>
@@ -13,6 +14,7 @@ using std::clog;
 using std::endl;
 using std::vector;
 using std::array;
+using float_vec16 = ap_uint<512>;
 
 template <typename T>
 using aligned_vector = std::vector<T, tapa::aligned_allocator<T>>;
@@ -25,8 +27,8 @@ void DotProd_CPU(aligned_vector<float> v1, aligned_vector<float> v2, float& outp
     output = sum;
 }
 
-void DotProd(tapa::mmap<const float> v1, tapa::mmap<const float> v2,
-             tapa::mmap<float> output, uint64_t n, tapa::mmap<uint64_t> total);
+void DotProd(tapa::mmap<const float_vec16> v1, tapa::mmap<const float_vec16> v2,
+             tapa::mmap<float> prod_out, uint64_t n, tapa::mmap<uint64_t> total);
 
 DEFINE_string(bitstream, "", "path to bitstream file, run csim if empty");
 
@@ -42,16 +44,25 @@ int main(int argc, char* argv[]) {
     uint64_t& cycles = total[0];
 
     for (uint64_t i = 0; i < n; ++i) {
-        v1[i] = static_cast<float>(i);
-        v2[i] = static_cast<float>(i) * 2;
+        // v1[i] = static_cast<float>(i);
+        // v2[i] = static_cast<float>(i) * 2;
+        v1[i] = 1.0;
+        v2[i] = 1.0;
     }
+
+    aligned_vector<float_vec16> v1_vec(n >> 4);
+    aligned_vector<float_vec16> v2_vec(n >> 4);
+
+    std::memcpy(v1_vec.data(), v1.data(), sizeof(float) * n);
+    std::memcpy(v2_vec.data(), v2.data(), sizeof(float) * n);
+
     int64_t kernel_time_ns = tapa::invoke(
         DotProd,
         FLAGS_bitstream,
-        tapa::read_only_mmap<const float>(v1),
-        tapa::read_only_mmap<const float>(v2),
+        tapa::read_only_mmap<const float_vec16>(v1_vec),
+        tapa::read_only_mmap<const float_vec16>(v2_vec),
         tapa::write_only_mmap<float>(output),
-        n,
+        n >> 4,
         tapa::write_only_mmap<uint64_t>(total)
     );
 
@@ -63,6 +74,7 @@ int main(int argc, char* argv[]) {
     clog << "CPU Output: " << output_cpu << endl;
 
     clog << "Vector size N=" << n << endl;
+    clog << "Packed vector size = " << v1_vec.size() << endl;
     clog << "Total Cycles: " << cycles << endl;
 
     clog << "\nCycles/elem = " << (float)cycles / n << endl;
