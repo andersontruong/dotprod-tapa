@@ -35,7 +35,7 @@ DEFINE_string(bitstream, "", "path to bitstream file, run csim if empty");
 int main(int argc, char* argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
 
-    const uint64_t n = argc > 1 ? atoll(argv[1]) : 1024 * 1024;
+    const uint64_t n = argc > 1 ? atoll(argv[1]) : 512 * 512;
     aligned_vector<float> v1(n);
     aligned_vector<float> v2(n);
     aligned_vector<float> output = { 0 };
@@ -44,10 +44,8 @@ int main(int argc, char* argv[]) {
     uint64_t& cycles = total[0];
 
     for (uint64_t i = 0; i < n; ++i) {
-        // v1[i] = static_cast<float>(i);
-        // v2[i] = static_cast<float>(i) * 2;
-        v1[i] = 1.0;
-        v2[i] = 1.0;
+        v1[i] = static_cast<float>(i);
+        v2[i] = static_cast<float>(i) * 2;
     }
 
     aligned_vector<float_vec16> v1_vec(n >> 4);
